@@ -1,0 +1,9 @@
+[submodule "nyt"]
+	path = nyt
+	url = https://github.com/nytimes/covid-19-data.git
+[submodule "jhu"]
+	path = jhu
+	url = https://github.com/CSSEGISandData/COVID-19.git
+[submodule "US_County_Level_Election_Results_08-16"]
+	path = US_County_Level_Election_Results_08-16
+	url = https://github.com/tonmcg/US_County_Level_Election_Results_08-16.git
