@@ -16,12 +16,23 @@ matplotlib.use('gtk3agg')
 MEAN_WINDOW=7
 # States to omit in US total
 EXCLUSIONS = {}
+# Remove outliers that are more than x times the preceding value.
+OUTLIER_FACTOR = 3
 
-states_of_interest = ['D', 'R', 'US', 'Dc', 'Rc']
-states_of_interest = ['MA', 'PA', 'IL', 'US']
+# states_of_interest = ['D', 'R', 'US', 'Dc', 'Rc']
+# states_of_interest = ['MA', 'PA', 'IL', 'US']
+states_of_interest = ['MA']
 # states_of_interest = ['ME', 'MA', 'NY']
 # states_of_interest = ['US']
 # states_of_interest = ['AZ', 'FL', 'TX', 'NY', 'US']
+
+# Massachusetts phases for reopening.
+phases = {
+  'Phase 1': '2020-05-25',
+  'Phase 2.1': '2020-06-08',
+  'Phase 2.2': '2020-06-22',
+  'Phase 3.1': '2020-07-06',
+}
 
 # States with > 5% margin in the 2016 election.
 ds = {'DC', 'HI', 'MD', 'MA', 'NY', 'VT', 'IL', 'NJ', 'CT', 'RI', 'OR', 'NM', 'CA'}
@@ -30,7 +41,7 @@ rs = {'NE', 'WY', 'WV', 'OK', 'ND', 'ID', 'KY', 'SD', 'AL', 'AR', 'TN', 'KS', 'M
 # Counties with > 10% margin in the 2016 election.
 counties = {'Dc': set(), 'Rc': set()}
 
-START_DATE = num2date(datestr2num('2020-05-01'))
+START_DATE = num2date(datestr2num('2020-05-11'))
 
 state_aliases = {
   'Alabama': 'AL',
@@ -125,6 +136,11 @@ def difference(ys):
 def ratio(ys):
   return [ys[n+1] / max(1, ys[n]) for n in range(len(ys) - 1)]
 
+def remove_outliers(xs, ys):
+  xs = [xs[i] for i in range(len(xs)) if ys[i] <= ys[i-1] * OUTLIER_FACTOR or i == 0]
+  ys = [ys[i] for i in range(len(ys)) if ys[i] <= ys[i-1] * OUTLIER_FACTOR or i == 0]
+  return xs, ys
+
 def graph_cases(xs, cases, finalize=True, ts=0, epoch=START_DATE):
   ax = plt.gca()
   ax.xaxis.set_major_formatter(DateFormatter('%m-%d'))
@@ -141,14 +157,23 @@ def graph_cases(xs, cases, finalize=True, ts=0, epoch=START_DATE):
     ys = difference(ys)
     ys = ys[max(to_skip-MEAN_WINDOW, 0):]
     zs = time_shift(xs, ts)[-len(ys):]
+    zs, ys = remove_outliers(zs, ys)
     color=next(ax._get_lines.prop_cycler)['color']
     plt.plot(zs, ys, linestyle=':', color=color)
     plt.plot(zs[MEAN_WINDOW-1:], running_mean(ys, MEAN_WINDOW),
       label=state, color=color)
+  draw_phases()
   if finalize:
     finalize_plot()
   else:
     ax.set_prop_cycle(None)
+
+def draw_phases():
+  labels, dates = tuple(zip(*phases.items()))
+  plt.vlines(phases.values(), 100, 2000, colors='black')
+  for label,date in phases.items():
+    plt.annotate(label, (date, 2000))
+    pass
 
 def finalize_plot():
   plt.legend()

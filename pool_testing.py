@@ -14,10 +14,14 @@ def pool_positive_rate(pool_size, positive_rate):
 
 # Naive strat: test groups of `pool_size`. If positive, test individuals.
 # Cutoff is 1 + pN == N, or p = (N-1)/N for p = pool positive rate.
+
+# Threshold at which point using this pool size with the naive
+# strategy provides no benefit over testing individuals.
 def naive_pool_threshold(pool_size):
     a = pool_positive_rate(pool_size, UNIT_SPACE)
     return np.searchsorted(a, 1 - 1. / pool_size) / NUM_SAMPLES
 
+# Expected savings per pooled test, using the naive strategy.
 def naive_pool_savings(pool_size, pool_positive_rate):
     return np.where(pool_size == 1, 0, 1 - (1 / pool_size + pool_positive_rate))
 
