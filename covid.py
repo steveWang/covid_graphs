@@ -117,7 +117,6 @@ def populate_counties():
       if margin < -THRESHOLD:
         counties['Rc'].add(fips)
         rcount += float(line['total_votes'])
-  print(dcount, rcount)
 
 def running_mean(x, N):
   cumsum = np.cumsum(np.insert(x, 0, 0)) 
@@ -161,7 +160,7 @@ def graph_cases(xs, cases, finalize=True, ts=0, epoch=START_DATE):
     color=next(ax._get_lines.prop_cycler)['color']
     plt.plot(zs, ys, linestyle=':', color=color)
     plt.plot(zs[MEAN_WINDOW-1:], running_mean(ys, MEAN_WINDOW),
-      label=state, color=color)
+             label=state, color=color)
   draw_phases()
   if finalize:
     finalize_plot()
@@ -169,11 +168,12 @@ def graph_cases(xs, cases, finalize=True, ts=0, epoch=START_DATE):
     ax.set_prop_cycle(None)
 
 def draw_phases():
+  if states_of_interest != ['MA']:
+    return
   labels, dates = tuple(zip(*phases.items()))
   plt.vlines(phases.values(), 100, 2000, colors='black')
   for label,date in phases.items():
     plt.annotate(label, (date, 2000))
-    pass
 
 def finalize_plot():
   plt.legend()
@@ -282,26 +282,27 @@ def build_from_nyt():
 def build_from_nyt_counties():
   populate_counties()
   PATH = '/home/steve/workspace/scratch/covid_data/nyt/us-counties.csv'
-  axis = set()
+  axis = []
   cases = defaultdict(dict)
   deaths = defaultdict(dict)
   with open(PATH) as csvfile:
-      reader = csv.DictReader(csvfile)
-      for line in reader:
+    last_datestr, date = None, None
+    reader = csv.DictReader(csvfile)
+    for line in reader:
+      if last_datestr != line['date']:
+        last_datestr = line['date']
         date = num2date(datestr2num(line['date']))
-        axis.add(date)
-        state = canonicalize(line['state'])
-        fips = line['fips']
-        c, d = int(line['cases']), int(line['deaths'])
-        for k,s in counties.items():
-          if fips in s:
-            cases[k][date] = cases[k].get(date, 0) + c
-            deaths[k][date] = deaths[k].get(date, 0) + d
-        add_date(cases, state, date, c)
-        add_date(deaths, state, date, d)
-
-  xs = sorted(axis)
-  graph_cases(xs, cases)
+        axis.append(date)
+      state = canonicalize(line['state'])
+      fips = line['fips']
+      c, d = int(line['cases']), int(line['deaths'])
+      for k,s in counties.items():
+        if fips in s:
+          add_date(cases, k, date, c)
+          add_date(deaths, k, date, d)
+      add_date(cases, state, date, c)
+      add_date(deaths, state, date, d)
+  graph_cases(axis, cases)
 
 def build_from_covid_tracking():
   req = requests.get('https://covidtracking.com/api/v1/states/daily.csv')
